@@ -16,10 +16,7 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.template.defaulttags import url
 from django.urls import path
-
-from django.views.static import serve
 
 from TomatoesFarmingapp.views import home, courses, quizzes, register, login_request, quiz1, logout_request
 
@@ -33,7 +30,4 @@ urlpatterns = [
     path('register/', register, name="register"),
     path('login/', login_request, name="login"),
     path('logout/', logout_request, name= "logout"),
-
-    url(r'^media/(?P<path>.*)$', serve,{'document_root':       settings.MEDIA_ROOT}),
-    url(r'^static/(?P<path>.*)$', serve,{'document_root': settings.STATIC_ROOT}),
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
