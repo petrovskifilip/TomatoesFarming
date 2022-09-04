@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+    <title>Квиз</title>
+
+    <!-- JavaScript Bundle with Popper -->
+    <!-- CSS only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa"
+            crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container px-4 px-lg-5">
+        <a class="navbar-brand" href="{% url 'home' %}">Како се одгледуваат домати</a>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+                <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Почетна</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'courses' %}">Курсеви</a></li>
+                <li class="nav-item"><a class="nav-link active" href="{% url 'quizzes' %}">Квизови</a></li>
+            </ul>
+            <form class="d-flex">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">Добредојдовте, {{ user.username }}</a>
+                        </li>
+                        <li class="nav-item"><a class="btn btn-danger" href="{% url 'logout' %}">Одјави се</a>
+
+                            {% else %}
+
+                        <li class="nav-item"><a class="btn btn-primary" href="{% url 'register' %}">Регистрирај се</a>
+                        </li>
+                        <li class="nav-item"><a class="btn btn-success ms-3" href="{% url 'login' %}">Најави се</a></li>
+
+                    {% endif %}
+                </ul>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container" id='container'>
+    <div class="row">
+        <div class="col-2">
+
+        </div>
+        <div class="col-6">
+            <div class="" id='title'>
+                <h1 class="mt-5 display-3">Квиз</h1>
+                <button id="start" class="btn btn-warning float-end ms-5">Почнете одново </button>
+            </div>
+            <br/>
+            <div id='quiz'></div>
+            <button id="next" class="btn btn-primary btn-sm float-end me-5">Следно</button>
+            <button id="prev" class="btn btn-danger btn-sm">Претходно</button>
+        </div>
+        <div class="col-2">
+
+        </div>
+    </div>
+</div>
+
+<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
+
+<script>
+    (function () {
+        var questions = [{
+            question: "На колку степени треба да рти семето од доматите?",
+            choices: ["16 до 19", "19 до 22", "22 до 25", "25 до 28"],
+            correctAnswer: 2
+        }, {
+            question: "На колкава возраст се засадуваат одгледуваните садници?",
+            choices: ["25-30 дена", "30-35 дена", "35-40 дена", "40-45 дена"],
+            correctAnswer: 3
+        }, {
+            question: "Колку пати неделно се наводнуваат младите домати?",
+            choices: ["1-2 пати", "2-3 пати", "3-4 пати", "4-5 пати"],
+            correctAnswer: 0
+        }, {
+            question: "Колкава е минималната температура за нормален раст и развој?",
+            choices: ["10Ц", "12Ц", "14Ц", "16Ц"],
+            correctAnswer: 0
+        }, {
+            question: "На колкаво растојание се засадуваат доматите во редот?",
+            choices: ["30 до 40 см", "40 до 50 см", "50 до 60 см", "60 до 70 см"],
+            correctAnswer: 2
+        }];
+
+        var questionCounter = 0; //Tracks question number
+        var selections = []; //Array containing user choices
+        var quiz = $('#quiz'); //Quiz div object
+
+        // Display initial question
+        displayNext();
+
+        // Click handler for the 'next' button
+        $('#next').on('click', function (e) {
+            e.preventDefault();
+
+            // Suspend click listener during fade animation
+            if (quiz.is(':animated')) {
+                return false;
+            }
+            choose();
+
+            // If no user selection, progress is stopped
+            if (isNaN(selections[questionCounter])) {
+                alert('Одберете еден од понудените одговори!');
+            } else {
+                questionCounter++;
+                displayNext();
+            }
+        });
+
+        // Click handler for the 'prev' button
+        $('#prev').on('click', function (e) {
+            e.preventDefault();
+
+            if (quiz.is(':animated')) {
+                return false;
+            }
+            choose();
+            questionCounter--;
+            displayNext();
+        });
+
+        // Click handler for the 'Start Over' button
+        $('#start').on('click', function (e) {
+            e.preventDefault();
+
+            if (quiz.is(':animated')) {
+                return false;
+            }
+            questionCounter = 0;
+            selections = [];
+            displayNext();
+            $('#start').hide();
+        });
+
+        // Animates buttons on hover
+        $('.button').on('mouseenter', function () {
+            $(this).addClass('active');
+        });
+        $('.button').on('mouseleave', function () {
+            $(this).removeClass('active');
+        });
+
+        // Creates and returns the div that contains the questions and
+        // the answer selections
+        function createQuestionElement(index) {
+            var qElement = $('<div>', {
+                id: 'question'
+            });
+
+            var header = $('<h2 class="display-6">Прашање ' + (index + 1) + ':</h2>');
+            qElement.append(header);
+
+            var question = $('<p>').append(questions[index].question);
+            qElement.append(question);
+
+            var radioButtons = createRadios(index);
+            qElement.append(radioButtons);
+
+            return qElement;
+        }
+
+        // Creates a list of the answer choices as radio inputs
+        function createRadios(index) {
+            var radioList = $('<ul class="list-unstyled">');
+            var item;
+            var input = '';
+            for (var i = 0; i < questions[index].choices.length; i++) {
+                item = $('<li>');
+                input = '<input type="radio" name="answer" value=' + i + ' />';
+                input += questions[index].choices[i];
+                item.append(input);
+                radioList.append(item);
+            }
+            return radioList;
+        }
+
+        // Reads the user selection and pushes the value to an array
+        function choose() {
+            selections[questionCounter] = +$('input[name="answer"]:checked').val();
+        }
+
+        // Displays next requested element
+        function displayNext() {
+            quiz.fadeOut(function () {
+                $('#question').remove();
+
+                if (questionCounter < questions.length) {
+                    var nextQuestion = createQuestionElement(questionCounter);
+                    quiz.append(nextQuestion).fadeIn();
+                    if (!(isNaN(selections[questionCounter]))) {
+                        $('input[value=' + selections[questionCounter] + ']').prop('checked', true);
+                    }
+
+                    // Controls display of 'prev' button
+                    if (questionCounter === 1) {
+                        $('#prev').show();
+                    } else if (questionCounter === 0) {
+
+                        $('#prev').hide();
+                        $('#next').show();
+                    }
+                } else {
+                    var scoreElem = displayScore();
+                    quiz.append(scoreElem).fadeIn();
+                    $('#next').hide();
+                    $('#prev').hide();
+                    $('#start').show();
+                }
+            });
+        }
+
+        // Computes score and returns a paragraph element to be displayed
+        function displayScore() {
+            var score = $('<p>', {id: 'question'});
+
+            var numCorrect = 0;
+            for (var i = 0; i < selections.length; i++) {
+                if (selections[i] === questions[i].correctAnswer) {
+                    numCorrect++;
+                }
+            }
+
+            score.append('Имате ' + numCorrect + ' точни одговори од ' +
+                questions.length + ' прашања!!!');
+            return score;
+        }
+    })();
+</script>
+
+<footer class="py-5 bg-dark mt-5">
+    <div class="container"><p class="m-0 text-center text-white">Дизајн на интеракцијата човек-компјутер, 181063</p>
+    </div>
+</footer>
+
+</body>
+</html>
